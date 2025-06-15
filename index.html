@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lawyers Space: Interactive Architecture Blueprint with AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals (BG: slate-50, Text: slate-800, Primary: blue-600, Accent: blue-100) -->
+    <!-- Application Structure Plan: The SPA is designed as an interactive dashboard with a sticky sidebar for navigation. This structure deconstructs the dense technical document into logical, thematic sections (e.g., Frontend, Backend, Database), allowing for non-linear exploration. This is more user-friendly than a linear document, as users can jump directly to areas of interest. Key interactions include a clickable system diagram, a dynamic database schema viewer, and collapsible API lists. A new AI-powered section uses the Gemini API to provide simplified explanations and suggest architectural improvements, making the technical content more accessible. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: High-Level Architecture Diagram -> Goal: Organize/Relationships -> Viz: Interactive Diagram (HTML/CSS) -> Interaction: Click on components to highlight them -> Justification: Visually represents the system's structure and flow in a more engaging way than ASCII art.
+        - Report Info: Database Schemas -> Goal: Inform/Organize -> Viz: Tabbed Code Viewer -> Interaction: Click buttons to dynamically load schema info -> Justification: Presents complex JSON structures in a clean, interactive, and non-overwhelming manner.
+        - Report Info: Architectural Goals (Scalability) -> Goal: Inform/Illustrate -> Viz: Line Chart (Chart.js) -> Interaction: Hover for data points -> Justification: Translates an abstract concept like 'scalability' into a concrete, quantitative visualization, adding impact to the report's goals.
+        - Report Info: API Endpoints -> Goal: Organize/Inform -> Viz: Collapsible List (<details> tag) -> Interaction: Click to expand/collapse -> Justification: Manages a long list of technical information neatly, improving readability.
+        - Report Info: Architectural Concepts -> Goal: Explain -> Viz: Modal with AI-generated text -> Interaction: Select component and click button -> Justification: Uses Gemini API to provide on-demand, simplified explanations for non-technical stakeholders.
+     -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+            border-left: 3px solid transparent;
+        }
+        .nav-link.active {
+            color: #2563eb; /* blue-600 */
+            border-left-color: #2563eb; /* blue-600 */
+            background-color: #eff6ff; /* blue-50 */
+        }
+        .nav-link:hover {
+            color: #2563eb; /* blue-600 */
+            background-color: #eff6ff; /* blue-50 */
+        }
+        .diagram-box {
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .diagram-box:hover, .diagram-box.highlight {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            border-color: #2563eb; /* blue-600 */
+        }
+        .diagram-arrow {
+            position: relative;
+            width: 2px;
+            background-color: #94a3b8; /* slate-400 */
+            margin: 8px auto;
+        }
+        .diagram-arrow::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #94a3b8; /* slate-400 */
+        }
+        #ai-modal {
+            transition: opacity 0.3s ease;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-slate-700">
+
+    <div class="min-h-screen">
+        <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+            <header class="py-8 text-center">
+                <h1 class="text-4xl font-bold text-slate-800">Lawyers Space</h1>
+                <p class="mt-2 text-lg text-slate-600">Interactive Architecture Blueprint</p>
+            </header>
+
+            <div class="lg:grid lg:grid-cols-12 lg:gap-8">
+                <aside class="lg:col-span-3 lg:sticky lg:top-8 self-start mb-8 lg:mb-0">
+                    <nav id="navigation" class="space-y-1">
+                        <a href="#overview" class="nav-link group flex items-center px-4 py-2 text-md font-medium rounded-md">Overview & Goals</a>
+                        <a href="#ai-insights" class="nav-link group flex items-center px-4 py-2 text-md font-medium rounded-md">AI-Powered Insights ✨</a>
+                        <a href="#system-architecture" class="nav-link group flex items-center px-4 py-2 text-md font-medium rounded-md">System Architecture</a>
+                        <a href="#tech-stack" class="nav-link group flex items-center px-4 py-2 text-md font-medium rounded-md">Technology Stack</a>
+                        <a href="#frontend" class="nav-link group flex items-center px-4 py-2 text-md font-medium rounded-md">Frontend Tier</a>
+                        <a href="#backend" class="nav-link group flex items-center px-4 py-2 text-md font-medium rounded-md">Backend Tier</a>
+                        <a href="#database" class="nav-link group flex items-center px-4 py-2 text-md font-medium rounded-md">Database Tier</a>
+                        <a href="#deployment" class="nav-link group flex items-center px-4 py-2 text-md font-medium rounded-md">Deployment & Security</a>
+                    </nav>
+                </aside>
+
+                <main class="lg:col-span-9 space-y-12">
+                    
+                    <section id="overview" class="bg-white p-6 rounded-lg shadow-sm">
+                        <h2 class="text-2xl font-bold text-slate-800 mb-4">Overview & Architectural Goals</h2>
+                        <p class="mb-6 text-slate-600">This document outlines the software architecture for "Lawyers Space," a professional networking platform for verified lawyers. The system is designed to be a scalable, secure, and high-performance application with a consistent experience across web and mobile. The following core principles guide the architecture.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-center">
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <span class="text-3xl">🚀</span>
+                                <h3 class="font-semibold mt-2 text-slate-800">Scalability</h3>
+                                <p class="text-sm text-slate-500">Handle growth in users and data.</p>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <span class="text-3xl">🛡️</span>
+                                <h3 class="font-semibold mt-2 text-slate-800">Security</h3>
+                                <p class="text-sm text-slate-500">Protect professional user data.</p>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <span class="text-3xl">⚡</span>
+                                <h3 class="font-semibold mt-2 text-slate-800">Performance</h3>
+                                <p class="text-sm text-slate-500">Ensure a fast, responsive UI.</p>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <span class="text-3xl">🔧</span>
+                                <h3 class="font-semibold mt-2 text-slate-800">Maintainability</h3>
+                                <p class="text-sm text-slate-500">Enable easy updates and extension.</p>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <span class="text-3xl">📱</span>
+                                <h3 class="font-semibold mt-2 text-slate-800">Cross-Platform</h3>
+                                <p class="text-sm text-slate-500">Consistent Web & Mobile UX.</p>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <span class="text-3xl">💬</span>
+                                <h3 class="font-semibold mt-2 text-slate-800">Real-time</h3>
+                                <p class="text-sm text-slate-500">Instant and reliable chat.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="ai-insights" class="bg-white p-6 rounded-lg shadow-sm">
+                        <h2 class="text-2xl font-bold text-slate-800 mb-4">AI-Powered Insights ✨</h2>
+                        <p class="mb-6 text-slate-600">Leverage the Gemini API to get a deeper understanding of the architecture. You can generate simplified explanations for different parts of the system or ask for a high-level analysis of potential improvements.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <h3 class="font-semibold text-slate-800 mb-2">Explain a Component</h3>
+                                <p class="text-sm text-slate-500 mb-4">Select a system component to get a simple, non-technical explanation of its role.</p>
+                                <select id="ai-component-select" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                                    <option value="frontend">Frontend Tier</option>
+                                    <option value="backend">Backend Tier</option>
+                                    <option value="database">Database Tier</option>
+                                    <option value="deployment">Deployment & Security</option>
+                                </select>
+                                <button id="explain-btn" class="mt-4 w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition">✨ Explain in Simple Terms</button>
+                            </div>
+
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <h3 class="font-semibold text-slate-800 mb-2">Architectural Review</h3>
+                                <p class="text-sm text-slate-500 mb-4">Ask the AI to act as an expert architect and suggest potential improvements or future considerations.</p>
+                                <button id="improve-btn" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition mt-12">✨ Suggest Improvements</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="system-architecture" class="bg-white p-6 rounded-lg shadow-sm">
+                        <h2 class="text-2xl font-bold text-slate-800 mb-4">High-Level System Architecture</h2>
+                        <p class="mb-6 text-slate-600">The application follows a classic three-tier architecture, separating presentation (client), logic (server), and data (database). This model promotes modularity and scalability. Click on the components below to highlight them and see how they connect.</p>
+                        <div id="interactive-diagram" class="w-full text-center p-4">
+                            <div class="flex flex-col md:flex-row justify-center items-center gap-4 md:gap-8">
+                                <div id="diag-web" class="diagram-box w-full md:w-1/3 bg-white p-4 rounded-lg border-2 border-slate-300">
+                                    <h3 class="font-semibold text-blue-600">Web Client</h3>
+                                    <p class="text-sm text-slate-500">(React.js)</p>
+                                </div>
+                                <div id="diag-mobile" class="diagram-box w-full md:w-1/3 bg-white p-4 rounded-lg border-2 border-slate-300">
+                                    <h3 class="font-semibold text-blue-600">Mobile Client</h3>
+                                    <p class="text-sm text-slate-500">(React Native)</p>
+                                </div>
+                            </div>
+                            <div class="diagram-arrow h-12"></div>
+                            <div class="flex justify-center">
+                                <div id="diag-backend" class="diagram-box w-full md:w-2/3 bg-white p-4 rounded-lg border-2 border-slate-300">
+                                    <h3 class="font-semibold text-green-600">Backend Server</h3>
+                                    <p class="text-sm text-slate-500">(Node.js, Express, Socket.IO)</p>
+                                </div>
+                            </div>
+                            <div class="diagram-arrow h-12"></div>
+                            <div class="flex justify-center">
+                                <div id="diag-db" class="diagram-box w-full md:w-2/3 bg-white p-4 rounded-lg border-2 border-slate-300">
+                                    <h3 class="font-semibold text-purple-600">Database</h3>
+                                    <p class="text-sm text-slate-500">(MongoDB Atlas)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="tech-stack" class="bg-white p-6 rounded-lg shadow-sm">
+                        <h2 class="text-2xl font-bold text-slate-800 mb-4">Technology Stack</h2>
+                        <p class="mb-6 text-slate-600">A modern, robust technology stack is chosen to meet the project's goals. Each component is selected for its strengths in performance, developer experience, and ecosystem support.</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="p-4 bg-slate-50 rounded-lg text-center border border-slate-200">
+                                <p class="text-2xl font-bold text-blue-500">React</p><p class="text-sm text-slate-500">Web UI</p>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded-lg text-center border border-slate-200">
+                                <p class="text-2xl font-bold text-blue-500">React Native</p><p class="text-sm text-slate-500">Mobile UI</p>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded-lg text-center border border-slate-200">
+                                <p class="text-2xl font-bold text-green-600">Node.js</p><p class="text-sm text-slate-500">Backend Runtime</p>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded-lg text-center border border-slate-200">
+                                <p class="text-2xl font-bold text-green-600">Express</p><p class="text-sm text-slate-500">API Framework</p>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded-lg text-center border border-slate-200">
+                                <p class="text-2xl font-bold text-purple-600">MongoDB</p><p class="text-sm text-slate-500">NoSQL Database</p>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded-lg text-center border border-slate-200">
+                                <p class="text-2xl font-bold text-gray-700">Socket.IO</p><p class="text-sm text-slate-500">Real-time Chat</p>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded-lg text-center border border-slate-200">
+                                <p class="text-2xl font-bold text-orange-500">JWT</p><p class="text-sm text-slate-500">Authentication</p>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded-lg text-center border border-slate-200">
+                                <p class="text-2xl font-bold text-red-500">Docker</p><p class="text-sm text-slate-500">Containerization</p>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <section id="frontend" class="bg-white p-6 rounded-lg shadow-sm">
+                        <h2 class="text-2xl font-bold text-slate-800 mb-4">Frontend Tier (Client)</h2>
+                        <p class="mb-6 text-slate-600">The frontend consists of a web app built with React.js and mobile apps with React Native. This approach allows for significant code sharing for business logic and state management while delivering native performance on mobile.</p>
+                        <div class="chart-container">
+                             <canvas id="scalabilityChart"></canvas>
+                        </div>
+                        <p class="text-center text-sm text-slate-500 mt-2">Chart: Projected performance illustrates the "Scalability" and "Performance" goals, showing low response times even as concurrent users increase.</p>
+                    </section>
+
+                    <section id="backend" class="bg-white p-6 rounded-lg shadow-sm">
+                        <h2 class="text-2xl font-bold text-slate-800 mb-4">Backend Tier (Server)</h2>
+                        <p class="mb-6 text-slate-600">The Node.js backend exposes a versioned RESTful API for core application functions. It also handles real-time chat via WebSockets. The structure is service-oriented to facilitate future scaling into microservices.</p>
+                        <h3 class="text-xl font-semibold text-slate-800 mb-3">Core API Endpoints</h3>
+                        <div class="space-y-2">
+                             <details class="group bg-slate-50 p-3 rounded-md">
+                                <summary class="font-medium cursor-pointer list-none flex justify-between items-center">
+                                    Authentication
+                                    <span class="text-blue-500 group-open:rotate-180 transition-transform">▼</span>
+                                </summary>
+                                <div class="mt-3 text-sm text-slate-600 space-y-1">
+                                    <p><code class="bg-blue-100 text-blue-800 rounded px-1 py-0.5">POST /api/v1/auth/register</code></p>
+                                    <p><code class="bg-blue-100 text-blue-800 rounded px-1 py-0.5">POST /api/v1/auth/login</code></p>
+                                </div>
+                            </details>
+                            <details class="group bg-slate-50 p-3 rounded-md">
+                                <summary class="font-medium cursor-pointer list-none flex justify-between items-center">
+                                    Users & Profiles
+                                    <span class="text-blue-500 group-open:rotate-180 transition-transform">▼</span>
+                                </summary>
+                                <div class="mt-3 text-sm text-slate-600 space-y-1">
+                                    <p><code class="bg-blue-100 text-blue-800 rounded px-1 py-0.5">GET /api/v1/users/profile/:userId</code></p>
+                                    <p><code class="bg-blue-100 text-blue-800 rounded px-1 py-0.5">PUT /api/v1/users/profile</code></p>
+                                </div>
+                            </details>
+                             <details class="group bg-slate-50 p-3 rounded-md">
+                                <summary class="font-medium cursor-pointer list-none flex justify-between items-center">
+                                    Feed & Connections
+                                    <span class="text-blue-500 group-open:rotate-180 transition-transform">▼</span>
+                                </summary>
+                                <div class="mt-3 text-sm text-slate-600 space-y-1">
+                                    <p><code class="bg-blue-100 text-blue-800 rounded px-1 py-0.5">POST /api/v1/feed</code></p>
+                                    <p><code class="bg-blue-100 text-blue-800 rounded px-1 py-0.5">GET /api/v1/feed</code></p>
+                                    <p><code class="bg-blue-100 text-blue-800 rounded px-1 py-0.5">POST /api/v1/connections/send</code></p>
+                                    <p><code class="bg-blue-100 text-blue-800 rounded px-1 py-0.5">PUT /api/v1/connections/accept</code></p>
+                                </div>
+                            </details>
+                        </div>
+                    </section>
+
+                    <section id="database" class="bg-white p-6 rounded-lg shadow-sm">
+                        <h2 class="text-2xl font-bold text-slate-800 mb-4">Database Tier (Data)</h2>
+                        <p class="mb-6 text-slate-600">MongoDB is used for its flexible schema, which is ideal for evolving social network data. The database is structured into several key collections. Click a collection name to view its proposed schema.</p>
+                        <div id="schema-controls" class="flex flex-wrap gap-2 mb-4">
+                            <button class="db-btn bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium">users</button>
+                            <button class="db-btn bg-slate-200 text-slate-700 px-4 py-2 rounded-md text-sm font-medium">profiles</button>
+                            <button class="db-btn bg-slate-200 text-slate-700 px-4 py-2 rounded-md text-sm font-medium">posts</button>
+                            <button class="db-btn bg-slate-200 text-slate-700 px-4 py-2 rounded-md text-sm font-medium">connections</button>
+                            <button class="db-btn bg-slate-200 text-slate-700 px-4 py-2 rounded-md text-sm font-medium">messages</button>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg p-4 h-96 overflow-y-auto">
+                            <pre><code id="schema-display" class="text-sm text-slate-200"></code></pre>
+                        </div>
+                    </section>
+
+                    <section id="deployment" class="bg-white p-6 rounded-lg shadow-sm">
+                        <h2 class="text-2xl font-bold text-slate-800 mb-4">Deployment & Security</h2>
+                        <p class="mb-6 text-slate-600">The application is designed for modern cloud deployment with a strong emphasis on security at every layer.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h3 class="text-xl font-semibold text-slate-800 mb-3">Deployment Strategy</h3>
+                                <ul class="list-disc list-inside space-y-2 text-slate-600">
+                                    <li><span class="font-semibold">Backend:</span> Dockerized Node.js app on AWS/Heroku/GKE.</li>
+                                    <li><span class="font-semibold">Frontend (Web):</span> Static site on Vercel/Netlify.</li>
+                                    <li><span class="font-semibold">Frontend (Mobile):</span> Deployed via App Store & Google Play.</li>
+                                    <li><span class="font-semibold">CI/CD:</span> Automated testing and deployment via GitHub Actions.</li>
+                                </ul>
+                            </div>
+                             <div>
+                                <h3 class="text-xl font-semibold text-slate-800 mb-3">Key Security Measures</h3>
+                                <ul class="list-disc list-inside space-y-2 text-slate-600">
+                                    <li><span class="font-semibold">Password Hashing:</span> Using `bcrypt` for all user passwords.</li>
+                                    <li><span class="font-semibold">Data Encryption:</span> HTTPS/TLS for data in transit, encryption at rest via MongoDB Atlas.</li>
+                                    <li><span class="font-semibold">Input Validation:</span> Rigorous server-side validation to prevent injection.</li>
+                                    <li><span class="font-semibold">Rate Limiting:</span> Protection against brute-force attacks.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI Modal -->
+    <div id="ai-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 id="ai-modal-title" class="text-lg leading-6 font-medium text-gray-900">AI Insight</h3>
+                <div id="ai-modal-content" class="mt-2 px-7 py-3 min-h-[200px] flex items-center justify-center">
+                    <!-- Loader will be injected here -->
+                    <!-- Content will be injected here -->
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="close-modal-btn"
+                        class="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('main section');
+            const navLinks = document.querySelectorAll('#navigation a');
+            const diagramBoxes = document.querySelectorAll('.diagram-box');
+            
+            // AI Feature Elements
+            const aiModal = document.getElementById('ai-modal');
+            const aiModalTitle = document.getElementById('ai-modal-title');
+            const aiModalContent = document.getElementById('ai-modal-content');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const explainBtn = document.getElementById('explain-btn');
+            const improveBtn = document.getElementById('improve-btn');
+            const componentSelect = document.getElementById('ai-component-select');
+
+            // Navigation scroll spy
+            const observerOptions = { root: null, rootMargin: '0px', threshold: 0.3 };
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.getAttribute('id');
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href') === `#${id}`) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, observerOptions);
+            sections.forEach(section => observer.observe(section));
+            if (window.location.hash) {
+                 document.querySelector(`a[href="${window.location.hash}"]`)?.classList.add('active');
+            } else {
+                 document.querySelector('a[href="#overview"]')?.classList.add('active');
+            }
+
+            // Interactive Diagram
+            diagramBoxes.forEach(box => {
+                box.addEventListener('click', () => {
+                    diagramBoxes.forEach(b => b.classList.remove('highlight'));
+                    box.classList.add('highlight');
+                });
+            });
+
+
+            // Database Schema Viewer
+            const dbButtons = document.querySelectorAll('.db-btn');
+            const schemaDisplay = document.getElementById('schema-display');
+            const schemas = {
+                users: `{ "_id": ObjectId, "name": "John Doe", "email": "...", "password": "...", "barCouncilId": "...", "isVerified": false }`,
+                profiles: `{ "_id": ObjectId, "user": ObjectId, "headline": "...", "about": "...", "specializations": [...] }`,
+                posts: `{ "_id": ObjectId, "author": ObjectId, "content": "...", "likes": [...], "comments": [...] }`,
+                connections: `{ "_id": ObjectId, "requester": ObjectId, "recipient": ObjectId, "status": "pending" | "accepted" }`,
+                messages: `{ "_id": ObjectId, "conversationId": ObjectId, "sender": ObjectId, "content": "..." }`
+            };
+            function updateSchemaDisplay(schemaName) {
+                schemaDisplay.textContent = schemas[schemaName];
+                dbButtons.forEach(btn => {
+                    if (btn.textContent === schemaName) {
+                        btn.classList.replace('bg-slate-200', 'bg-blue-500');
+                        btn.classList.replace('text-slate-700', 'text-white');
+                    } else {
+                        btn.classList.replace('bg-blue-500', 'bg-slate-200');
+                        btn.classList.replace('text-white', 'text-slate-700');
+                    }
+                });
+            }
+            dbButtons.forEach(button => button.addEventListener('click', () => updateSchemaDisplay(button.textContent)));
+            updateSchemaDisplay('users');
+
+
+            // Scalability Chart
+            const ctx = document.getElementById('scalabilityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['100', '500', '1k', '5k', '10k', '25k', '50k'],
+                    datasets: [{
+                        label: 'API Response Time (ms)',
+                        data: [52, 65, 71, 85, 95, 110, 135],
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Response Time (ms)' } }, x: { title: { display: true, text: 'Concurrent Users' } } },
+                    plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } }
+                }
+            });
+
+            // --- Gemini API Integration ---
+
+            const showLoader = () => {
+                aiModalContent.innerHTML = '<div class="loader"></div>';
+            }
+
+            const showModal = (title) => {
+                aiModalTitle.textContent = title;
+                aiModal.classList.remove('hidden');
+            }
+            
+            const hideModal = () => {
+                aiModal.classList.add('hidden');
+                aiModalContent.innerHTML = '';
+            }
+
+            closeModalBtn.addEventListener('click', hideModal);
+
+            async function callGemini(prompt) {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                
+                showModal('AI is thinking...');
+                showLoader();
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts.length > 0) {
+                         // Simple markdown to HTML conversion
+                        let htmlContent = result.candidates[0].content.parts[0].text;
+                        htmlContent = htmlContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Bold
+                        htmlContent = htmlContent.replace(/\n/g, '<br>'); // Newlines
+                        aiModalContent.innerHTML = `<div class="text-left text-sm text-slate-600">${htmlContent}</div>`;
+                    } else {
+                        throw new Error("Invalid response structure from API.");
+                    }
+
+                } catch (error) {
+                    aiModalContent.innerHTML = `<p class="text-red-500">Sorry, an error occurred: ${error.message}</p>`;
+                }
+            }
+
+            explainBtn.addEventListener('click', () => {
+                const componentId = componentSelect.value;
+                const componentElement = document.getElementById(componentId);
+                const componentTitle = componentSelect.options[componentSelect.selectedIndex].text;
+                
+                if (componentElement) {
+                    const content = componentElement.innerText;
+                    const prompt = `You are a helpful engineering manager. Explain the following software architecture component to a non-technical project manager in simple terms. Focus on its purpose, what it does, and why it's important for the 'Lawyers Space' app. Keep it concise and clear.\n\nComponent: ${componentTitle}\n\nDetails:\n${content}`;
+                    callGemini(prompt);
+                    aiModalTitle.textContent = `Explaining: ${componentTitle}`;
+                }
+            });
+
+            improveBtn.addEventListener('click', () => {
+                 const fullArchitectureContext = Array.from(document.querySelectorAll('main section'))
+                    .map(s => s.innerText)
+                    .join('\n\n---\n\n');
+
+                const prompt = `You are an expert software architect reviewing the plans for a new professional networking app called "Lawyers Space". Based on the complete architecture document provided below, suggest 3 to 5 potential improvements, future considerations, or risks to watch out for. For each point, provide a brief, clear rationale.\n\nDOCUMENT:\n${fullArchitectureContext}`;
+                callGemini(prompt);
+                aiModalTitle.textContent = 'Architectural Improvement Suggestions';
+            });
+
+        });
+    </script>
+</body>
+</html>
